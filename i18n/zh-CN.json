@@ -1,11 +1,7 @@
 {
-  "enable": "启用等号计算",
-  "disable": "关闭等号计算",
-  "enabledMessage": "等号计算已启用",
-  "disabledMessage": "等号计算已关闭",
-  "savedMessage": "等号计算设置已保存",
   "on": "开启",
   "off": "关闭",
+  "savedMessage": "等号计算设置已保存",
   "enabledTitle": "自动计算",
   "enabledTip": "输入以等号结尾的算式后按回车自动算出结果",
   "spaceTitle": "空格键也触发",

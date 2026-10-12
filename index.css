@@ -2,11 +2,6 @@
  * 等号计算 (Equals Calc) 样式
  */
 
-/* 顶栏按钮：关闭状态降低透明度，方便一眼看出当前是否生效 */
-[data-id="plugin-calc-topbar"].plugin-calc__topbar--off {
-    opacity: 0.45;
-}
-
 .plugin-calc__hint {
     color: var(--b3-theme-on-surface);
     font-size: 13px;

@@ -19,16 +19,6 @@ import {settleText} from "./lib/expr.mjs";
 
 /** 设置存储文件名 */
 const STORAGE_NAME = "settings";
-/** 顶栏按钮 ID */
-const TOP_BAR_ID = "plugin-calc-topbar";
-/** 顶栏图标 ID；必须用 addIcons 注册成 symbol，否则 <use> 找不到会显示空白 */
-const TOP_BAR_ICON = "iconCalcEquals";
-/** 顶栏图标的 symbol 定义（内置图标里没有计算器，所以自定义一个） */
-const TOP_BAR_ICON_SVG = `<symbol id="${TOP_BAR_ICON}" viewBox="0 0 32 32">
-<path d="M9.5 3h13A2.5 2.5 0 0 1 25 5.5v21a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 7 26.5v-21A2.5 2.5 0 0 1 9.5 3zm0 2a.5.5 0 0 0-.5.5v21a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-21a.5.5 0 0 0-.5-.5h-13z"></path>
-<path d="M11.5 7h9a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zm1 2v3h7V9h-7z"></path>
-<path d="M11 17.2h3v1.8h-3zM18 17.2h3v1.8h-3zM11 21.2h3v1.8h-3zM18 21.2h3v1.8h-3zM11 25.2h10V27H11z"></path>
-</symbol>`;
 
 const DEFAULT_SETTINGS = {
     enabled: true,
@@ -47,8 +37,6 @@ export default class EqualsCalcPlugin extends Plugin {
         this.settings = Object.assign({}, DEFAULT_SETTINGS);
         /** 绑在 document 上的 keydown 处理器（捕获阶段） */
         this.onKeyDownBindThis = this.onKeyDown.bind(this);
-        /** 顶栏图标元素，用来显示启用状态 */
-        this.topBarElement = null;
     }
 
     async onload() {
@@ -56,25 +44,10 @@ export default class EqualsCalcPlugin extends Plugin {
 
         // 捕获阶段监听：Protyle 自身的 keydown 在冒泡阶段，
         // 放在捕获阶段才能保证「回车」先经过本插件。
+        //
+        // 插件不注册顶栏图标：设置统一从顶栏右侧的插件菜单进入
+        // （插件图标 →「等号计算」），那里由思源根据 openSetting 自动生成入口。
         document.addEventListener("keydown", this.onKeyDownBindThis, true);
-
-        // 顶栏用自定义 svg 图标：内置图标里没有计算器，
-        // 而且通过 addTopBar 渲染的是 <use xlink:href="#id">，必须先把 symbol 注册进 DOM。
-        this.addIcons(TOP_BAR_ICON_SVG);
-
-        this.topBarElement = this.addTopBar({
-            id: TOP_BAR_ID,
-            icon: TOP_BAR_ICON,
-            // 留空标题：不在图标上显示悬停提示，避免遮挡编辑区
-            title: "",
-            position: "right",
-            callback: () => this.toggleEnabled()
-        });
-    }
-
-    async onLayoutReady() {
-        // 顶栏按钮是同步创建的，这里只做一次状态回显
-        this.syncTopBarState();
     }
 
     onunload() {
@@ -98,7 +71,6 @@ export default class EqualsCalcPlugin extends Plugin {
 
     async saveSettings() {
         await this.saveData(STORAGE_NAME, this.settings);
-        this.syncTopBarState();
     }
 
     /**
@@ -204,29 +176,6 @@ export default class EqualsCalcPlugin extends Plugin {
             roundMode: this.settings.roundMode,
             roundDigits: this.settings.roundDigits
         };
-    }
-
-    /**
-     * 切换启用状态。
-     *
-     * 顶栏图标已经去掉了右键菜单和悬停提示，只保留「点击开关」这一个行为；
-     * 设置请从顶栏右侧的插件总菜单 →「等号计算」进入。
-     */
-    toggleEnabled() {
-        this.settings.enabled = !this.settings.enabled;
-        this.saveSettings();
-        // 关闭时给一次提示，避免用户以为插件失效
-        if (!this.settings.enabled) {
-            showMessage(this.i18n.disabledMessage);
-        }
-    }
-
-    syncTopBarState() {
-        const element = this.topBarElement || document.querySelector(`[data-id="${TOP_BAR_ID}"]`);
-        if (!element) {
-            return;
-        }
-        element.classList.toggle("plugin-calc__topbar--off", !this.settings.enabled);
     }
 
     /* ---------------------------------------------------------------- *

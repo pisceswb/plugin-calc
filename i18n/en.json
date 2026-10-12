@@ -1,11 +1,7 @@
 {
-  "enable": "Enable Equals Calc",
-  "disable": "Disable Equals Calc",
-  "enabledMessage": "Equals Calc enabled",
-  "disabledMessage": "Equals Calc disabled",
-  "savedMessage": "Equals Calc settings saved",
   "on": "On",
   "off": "Off",
+  "savedMessage": "Equals Calc settings saved",
   "enabledTitle": "Auto calculate",
   "enabledTip": "Press Enter after an expression ending with = to calculate the result",
   "spaceTitle": "Also trigger on Space",

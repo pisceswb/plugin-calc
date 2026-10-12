@@ -724,10 +724,10 @@ const shiftCase = await runCase("12*5=");
 eq(shiftCase.text, "12*5=60", "默认设置下可结算（用于对照）");
 
 /* ------------------------------------------------------------------ *
- * 7. 顶栏图标与设置面板
+ * 7. 顶栏与设置面板
  * ------------------------------------------------------------------ */
 
-// 加载插件，用来检查顶栏图标和设置
+// 加载插件，用来检查顶栏行为和设置面板
 topBarOptions.length = 0;
 registeredIcons.length = 0;
 editors.length = 0;
@@ -736,8 +736,6 @@ const ioPlugin = new PluginClass({
     name: "plugin-calc",
     displayName: "等号计算",
     i18n: {
-        openPluginSettings: "打开设置",
-        enable: "启用", disable: "关闭",
         on: "开", off: "关",
         enabledTitle: "自动计算", enabledTip: "提示",
         spaceTitle: "空格", spaceTip: "提示2",
@@ -745,28 +743,17 @@ const ioPlugin = new PluginClass({
         precisionTitle: "结果精度", precisionTip: "精度提示",
         roundExact: "精确", roundPlaces: "保留小数位数", roundDigits: "保留有效数字位数",
         usageTitle: "用法", usageTip: "示例",
-        savedMessage: "已保存", enabledMessage: "已启用", disabledMessage: "已关闭"
+        savedMessage: "已保存"
     }
 });
 await ioPlugin.onload();
 
-// 注册过自定义图标 symbol
-eq(registeredIcons.length, 1, "调用过一次 addIcons");
-eq(registeredIcons[0].includes("<symbol id="), true, "注册的是 symbol 定义");
-
-// 顶栏图标引用的是注册过的 symbol，而不是不存在的内置图标
-eq(topBarOptions.length, 1, "注册了一个顶栏按钮");
-const topBarOption = topBarOptions[0];
-eq(topBarOption.icon, "iconCalcEquals", "顶栏图标用自定义图标名");
-eq(registeredIcons[0].includes(`id="${topBarOption.icon}"`), true,
-    "顶栏引用的图标名与注册的 symbol 一致（否则 <use> 会显示空白）");
-eq(/^<symbol[^>]*viewBox="0 0 32 32"/.test(registeredIcons[0]), true,
-    "symbol 带 viewBox（否则缩放会异常）");
-
-// 顶栏图标只保留「点击开关」：不要悬停提示，也不要右键菜单
-eq(topBarOption.title, "", "顶栏图标不带悬停提示（避免遮挡编辑区）");
-eq(topBarOption.contextMenu, undefined, "顶栏图标没有右键菜单（设置走插件总菜单）");
-eq(typeof topBarOption.callback, "function", "顶栏图标保留点击开关");
+// 插件不占用顶栏：不注册图标、不加顶栏按钮。
+// 设置入口由思源根据 openSetting 生成（顶栏插件菜单 →「等号计算」）。
+eq(topBarOptions.length, 0, "不注册顶栏按钮");
+eq(registeredIcons.length, 0, "不注册自定义图标 symbol");
+eq(typeof ioPlugin.toggleEnabled, "undefined", "没有顶栏开关方法");
+eq(typeof ioPlugin.syncTopBarState, "undefined", "没有顶栏状态同步方法");
 
 // 设置面板可以正常打开
 eq(!!ioPlugin.setting, true, "插件创建了 Setting 实例");

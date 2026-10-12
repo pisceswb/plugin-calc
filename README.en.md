@@ -78,20 +78,14 @@ The plugin never uses `eval` / `new Function`; it implements its own expression 
 
 ## Settings
 
-Click the calculator icon in the top bar to toggle the plugin on or off (the icon dims
-when disabled). The full settings panel lives in the plugin menu at the right end of the
-top bar: **plugin icon → 等号计算 (Equals Calc)**.
+The plugin does not occupy a top bar slot. Settings live in the plugin menu at the right end
+of the top bar: **plugin icon → 等号计算 (Equals Calc)**.
 
 - **Auto calculate** — master switch
 - **Also trigger on Space** — off by default (Space is a common typing key)
 - **Support Ctrl/Cmd + Enter** — on by default, for forcing a calculation while auto mode is off
 - **Result precision** — exact / decimal places / significant digits
 
-> The top bar uses an SVG symbol registered by the plugin itself (SiYuan's built-in
-> icon set has no calculator). `addTopBar` renders `<use xlink:href="#iconName">`,
-> so the matching symbol must be registered with `addIcons` first — otherwise the
-> slot shows up empty.
->
 > `Setting` must be constructed with a `confirmCallback`: SiYuan's implementation
 > looks up `.b3-dialog__action .b3-button` and calls `btnsElement[0].addEventListener`.
 > Without `confirmCallback` that button row is hidden, the lookup yields `undefined`,
