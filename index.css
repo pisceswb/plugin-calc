@@ -1,0 +1,38 @@
+/*!
+ * 等号计算 (Equals Calc) 样式
+ */
+
+/* 顶栏按钮：关闭状态降低透明度，方便一眼看出当前是否生效 */
+[data-id="plugin-calc-topbar"].plugin-calc__topbar--off {
+    opacity: 0.45;
+}
+
+.plugin-calc__hint {
+    color: var(--b3-theme-on-surface);
+    font-size: 13px;
+    line-height: 1.75;
+    white-space: pre-line;
+    background: var(--b3-theme-surface-lighter, var(--b3-theme-background));
+    border-radius: 4px;
+    padding: 8px 10px;
+}
+
+/* 精度设置：下拉框 + 位数输入框并排 */
+.plugin-calc__row {
+    gap: 8px;
+    align-items: center;
+}
+
+.plugin-calc__row .b3-select {
+    flex: 1;
+    min-width: 0;
+}
+
+.plugin-calc__row .b3-text-field {
+    flex: none;
+    width: 88px;
+}
+
+.plugin-calc__disabled {
+    opacity: 0.45;
+}

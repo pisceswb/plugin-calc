@@ -1,0 +1,22 @@
+{
+  "enable": "Enable Equals Calc",
+  "disable": "Disable Equals Calc",
+  "enabledMessage": "Equals Calc enabled",
+  "disabledMessage": "Equals Calc disabled",
+  "savedMessage": "Equals Calc settings saved",
+  "on": "On",
+  "off": "Off",
+  "enabledTitle": "Auto calculate",
+  "enabledTip": "Press Enter after an expression ending with = to calculate the result",
+  "spaceTitle": "Also trigger on Space",
+  "spaceTip": "Calculate on Space as well as Enter (changes the default Space behaviour, off by default)",
+  "ctrlEnterTitle": "Support Ctrl/Cmd + Enter",
+  "ctrlEnterTip": "Hold Ctrl (Cmd on macOS) and press Enter to force a calculation",
+  "precisionTitle": "Result precision",
+  "precisionTip": "Exact keeps terminating values as-is; decimal places or significant digits round the result. Range 0-15 (1-15 for significant digits)",
+  "roundExact": "Exact",
+  "roundPlaces": "Decimal places",
+  "roundDigits": "Significant digits",
+  "usageTitle": "Examples",
+  "usageTip": "Type an expression and press Enter:\n12*5=            ->  12*5=60\n测试12*5=        ->  测试12*5=60\n12×5=            ->  12×5=60\n12×5=60*3=       ->  12×5=60*3=180\n\nEquations work too:\nx+3=5=           ->  x+3=5=2\na+3=5;a=         ->  a+3=5;a=2\n2x=10=           ->  2x=10=5\nx^2=4=           ->  x^2=4=-2 或 2\n\nSupported: + - × ÷ % ^, parentheses, implicit multiplication (2x, 2(x+1)),\nthousand separators (1,000), full-width symbols, sqrt/abs/round/floor/ceil/\nmin/max/sum/avg, constants pi and e, and inline assignments such as a=3;a*2=."
+}
