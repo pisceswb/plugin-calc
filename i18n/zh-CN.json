@@ -1,0 +1,23 @@
+{
+  "topBarTitle": "等号计算：点击开关，右键更多选项",
+  "enable": "启用等号计算",
+  "disable": "关闭等号计算",
+  "enabledMessage": "等号计算已启用",
+  "disabledMessage": "等号计算已关闭",
+  "savedMessage": "等号计算设置已保存",
+  "on": "开启",
+  "off": "关闭",
+  "enabledTitle": "自动计算",
+  "enabledTip": "输入以等号结尾的算式后按回车自动算出结果",
+  "spaceTitle": "空格键也触发",
+  "spaceTip": "除了回车键，按空格键也会结算（会改变空格的默认输入行为，默认关闭）",
+  "ctrlEnterTitle": "支持 Ctrl/⌘ + 回车",
+  "ctrlEnterTip": "按住 Ctrl（macOS 为 ⌘）再按回车可强制结算一次",
+  "precisionTitle": "结果精度",
+  "precisionTip": "精确：能除尽就原样显示；小数位/有效数字：按指定位数四舍五入。位数范围 0–15（有效数字 1–15）",
+  "roundExact": "精确",
+  "roundPlaces": "保留小数位数",
+  "roundDigits": "保留有效数字位数",
+  "usageTitle": "用法示例",
+  "usageTip": "输入算式后按回车即可结算：\n12*5=            →  12*5=60\n测试12*5=        →  测试12*5=60\n12×5=            →  12×5=60\n12×5=60*3=       →  12×5=60*3=180\n\n一元方程也可以算：\nx+3=5=           →  x+3=5=2\na+3=5;a=         →  a+3=5;a=2\n2x=10=           →  2x=10=5\nx^2=4=           →  x^2=4=-2 或 2\n\n支持：+ - × ÷ % ^、括号、隐含乘法（2x、2(x+1)）、千分位（1,000）、\n全角符号、sqrt/abs/round/floor/ceil/min/max/sum/avg、pi 与 e 等常量，\n以及 a=3;a*2= 这类行内赋值。"
+}

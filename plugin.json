@@ -1,0 +1,40 @@
+{
+  "name": "plugin-calc",
+  "author": "pisceswb",
+  "url": "https://github.com/pisceswb/plugin-calc",
+  "version": "0.1.0",
+  "minAppVersion": "3.0.0",
+  "backends": [
+    "all"
+  ],
+  "frontends": [
+    "all"
+  ],
+  "disabledInPublish": false,
+  "displayName": {
+    "default": "Equals Calc",
+    "zh-CN": "等号计算"
+  },
+  "description": {
+    "default": "Type an expression ending with = and press Enter to get the result, e.g. 12*5= becomes 12*5=60. Also solves simple equations such as x+3=5=",
+    "zh-CN": "输入以等号结尾的算式后按回车自动算出结果，例如输入 12*5= 按回车得到 12*5=60；也支持 x+3=5= 这类一元方程"
+  },
+  "readme": {
+    "default": "README.md",
+    "zh-CN": "README.zh-CN.md"
+  },
+  "icon": "icon.png",
+  "preview": "preview.png",
+  "keywords": [
+    "计算",
+    "计算器",
+    "算式",
+    "等号",
+    "方程",
+    "calculator",
+    "calc",
+    "math",
+    "equals",
+    "equation"
+  ]
+}
