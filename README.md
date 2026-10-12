@@ -1,26 +1,25 @@
-# Equals Calc
+[English](./README.en.md)
 
-A SiYuan plugin: type an expression ending with `=` and **press Enter** to get the result
-appended right after the equals sign.
+# 等号计算 (Equals Calc)
 
-## Features
+思源笔记插件：在编辑器里输入以等号结尾的算式，**按回车**自动把结果补在等号后面。
 
-| Type | After Enter |
+## 功能
+
+| 输入 | 按回车后 |
 | --- | --- |
 | `12*5=` | `12*5=60` |
 | `测试12*5=` | `测试12*5=60` |
 | `12×5=` | `12×5=60` |
 | `12×5=60*3=` | `12×5=60*3=180` |
 
-Only text **before the caret** that ends with a complete expression plus `=` is evaluated.
-Any leading words or units are left untouched.
+只有「光标前、且以等号结尾」的算式会被结算，行首的中文、单位等文字都会原样保留。
 
-## Linear equations
+## 一元方程
 
-When the same unknown appears on both sides of `=`, the expression is solved as an
-equation (terms are moved to one side and solved with exact rational coefficients):
+等号两边出现同一个未知量时，会当作一元方程求解（移项后用多项式求解，系数为精确有理数）：
 
-| Type | After Enter |
+| 输入 | 按回车后 |
 | --- | --- |
 | `x+3=5=` | `x+3=5=2` |
 | `a+3=5;a=` | `a+3=5;a=2` |
@@ -28,118 +27,113 @@ equation (terms are moved to one side and solved with exact rational coefficient
 | `2x+3=7=` | `2x+3=7=2` |
 | `x/2=3=` | `x/2=3=6` |
 | `x^2=4=` | `x^2=4=-2 或 2` |
-| `x^2+1=0=` | `x^2+1=0=1i 或 -1i` (complex roots) |
-| `x^3=2=` | `x^3=2=1.25992105` (numeric) |
+| `x^2+1=0=` | `x^2+1=0=1i 或 -1i`（共轭复根） |
+| `x^3=2=` | `x^3=2=1.25992105`（数值解） |
 
-- **Linear**: solved exactly by moving terms
-- **Quadratic**: root formula; negative discriminant yields conjugate complex roots
-- **Cubic and higher**: one real root via Newton iteration
-- **Implicit multiplication** is supported: `2x`, `2(x+1)`, `(x+1)(x-1)`
-- Inline assignments combine with equations: `n=2;n*x=6=` -> `n=2;n*x=6=3`
-- Equations with no solution report it (e.g. `3=5`)
+- **一次方程**：移项直接得到精确解
+- **二次方程**：求根公式；判别式为负时给出共轭复根
+- **三次及以上**：牛顿迭代求一个实根
+- 支持 `2x`、`2(x+1)`、`(x+1)(x-1)` 这类**隐含乘法**
+- 行内赋值可以与方程混用：`n=2;n*x=6=` → `n=2;n*x=6=3`
+- 方程无解时会提示（例如 `3=5`）
 
-## Result precision
+## 结果精度
 
-The settings panel controls how results are displayed:
+设置里可以指定结果的显示精度：
 
-- **Exact** (default): terminating values print as-is — `12*5=` -> `60`, `1/8=` -> `0.125`
-- **Decimal places**: round to N places, trailing zeros dropped
-- **Significant digits**: round to N significant digits; `1234.5678` with 2 -> `1200`
+- **精确**（默认）：能除尽就原样显示，例如 `12*5=` → `60`、`1/8=` → `0.125`；除不尽时保留内置的 40 位
+- **保留小数位数**：按指定位数四舍五入，末尾多余的 0 会去掉
+- **保留有效数字位数**：按指定有效数字四舍五入，`1234.5678` 取 2 位 → `1200`
 
-Range 0–15 (1–15 for significant digits). The setting also applies to equation
-solutions: with 2 decimal places, `3x=1=` -> `3x=1=0.33`.
+位数范围 0–15（有效数字 1–15）。精度设置同时作用于普通算式和方程解，例如设为 2 位小数后 `3x=1=` → `3x=1=0.33`。
 
-Rounding is **exact in decimal**: `1.005` to 2 places gives `1.01`, not `1.00`
-as binary floating point would.
+舍入是**十进制精确舍入**：`1.005` 保留 2 位小数得到 `1.01`，不会像浮点数那样得到 `1.00`。
 
-## Supported syntax
+## 支持的写法
 
-- **Arithmetic**: `+` `-` `*` `/`, plus `×` `÷` `·`
-- **Precedence**: standard precedence (multiplication before addition) with parentheses
-- **Power and modulo**: `2^10`, `2**8`, `7%2`
-- **Percent**: `50%` = 0.5, `200*10%` = 20
-- **Thousand separators**: `1,000+1=` -> `1,000+1=1001`
-- **Full-width symbols**: `１２＋３=`, `（２＋３）＊４=`
-- **Constants**: `pi`, `e`
-- **Functions**: `sqrt` `abs` `round` `floor` `ceil` `trunc` `min` `max` `sum` `avg` `log` `ln` `exp` `sin` `cos` `tan` `asin` `acos` `atan` `pow`
-- **Inline assignment**: `a=3;a*2=` -> `a=3;a*2=6`
-- **Negatives and complex numbers**: `-5+3=` -> `-5+3=-2`; `sqrt(-4)=` -> `sqrt(-4)=2i`
+- **四则运算**：`+` `-` `*` `/`，以及 `×` `÷` `·` 等符号
+- **优先级**：按常规算式优先级（先乘除后加减），支持括号 `()`
+- **幂与取模**：`2^10`、`2**8`、`7%2`
+- **百分比**：`50%` = 0.5，`200*10%` = 20
+- **千分位**：`1,000+1=` → `1,000+1=1001`
+- **全角符号**：`１２＋３=`、`（２＋３）＊４=` 都能识别
+- **常量**：`pi`（π）、`e`
+- **函数**：`sqrt` `abs` `round` `floor` `ceil` `trunc` `min` `max` `sum` `avg` `log` `ln` `exp` `sin` `cos` `tan` `asin` `acos` `atan` `pow`
+- **行内赋值**：`a=3;a*2=` → `a=3;a*2=6`
+- **负数与复数**：`-5+3=` → `-5+3=-2`；`sqrt(-4)=` → `sqrt(-4)=2i`
 
-## Precision
+## 计算精度
 
-The plugin never uses `eval` / `new Function`; it implements its own expression parser and
-**decimal, high-precision arithmetic**:
+插件不使用 `eval` / `new Function`，而是自己实现了表达式解析和**十进制高精度运算**：
 
-- `0.1+0.2=` yields a clean `0.3` (not `0.30000000000000004`)
-- Large integers keep full precision: `99999999999999999999+1=`
-- Non-terminating divisions keep 40 fractional digits
+- `0.1+0.2=` 得到干净的 `0.3`（而不是 `0.30000000000000004`）
+- 大整数不会丢精度：`99999999999999999999+1=` 得到完整结果
+- 除不尽时保留 40 位小数，例如 `1/3=`
 
-## Settings
+## 设置
 
-Click the calculator icon in the top bar to toggle, right-click it and choose
-"Open plugin settings":
+点击顶栏的计算器图标可以快速开关（关闭后图标变淡，并有提示）。
+完整设置请从顶栏右侧的插件菜单进入：**插件图标 → 等号计算**。
 
-- **Auto calculate** — master switch
-- **Also trigger on Space** — off by default (Space is a common typing key)
-- **Support Ctrl/Cmd + Enter** — on by default, for forcing a calculation while auto mode is off
-- **Result precision** — exact / decimal places / significant digits
+- **自动计算**：总开关
+- **空格键也触发**：默认关闭（空格是常用输入键，开启后会影响默认行为）
+- **支持 Ctrl/⌘ + 回车**：默认开启，可在关闭自动结算时手动触发一次
+- **结果精度**：精确 / 保留小数位数 / 保留有效数字位数
 
-> The top bar uses an SVG symbol registered by the plugin itself (SiYuan's built-in
-> icon set has no calculator). `addTopBar` renders `<use xlink:href="#iconName">`,
-> so the matching symbol must be registered with `addIcons` first — otherwise the
-> slot shows up empty.
+> 顶栏图标用的是插件自己注册的 SVG symbol（思源内置图标里没有计算器）。
+> 通过 `addTopBar` 的 `icon` 字段渲染出来的是 `<use xlink:href="#图标名">`，
+> 所以必须先用 `addIcons` 把同名 symbol 注册进 DOM，否则图标位置会是空白。
 >
-> `Setting` must be constructed with a `confirmCallback`: SiYuan's implementation
-> looks up `.b3-dialog__action .b3-button` and calls `btnsElement[0].addEventListener`.
-> Without `confirmCallback` that button row is hidden, the lookup yields `undefined`,
-> and the resulting TypeError stops the dialog from ever appearing — which looks
-> like "clicking settings does nothing".
+> 设置面板必须给 `Setting` 传 `confirmCallback`：思源内部实现里会取
+> `.b3-dialog__action .b3-button` 这两个按钮，没有 `confirmCallback` 时按钮容器被隐藏、
+> 取不到按钮，`btnsElement[0]` 为 `undefined` 会抛错，表现为「点设置没反应」。
 
-## Behaviour notes
+## 行为说明
 
-- The plugin only acts when the text before the caret ends with `=` preceded by a complete
-  expression; otherwise Enter keeps its normal new-block behaviour.
-- The caret lands after the result. Changes are written back through SiYuan's transaction API,
-  so they are **undoable** and stay in sync with the kernel.
-- Comparison operators such as `==`, `>=`, `<=` are ignored.
-- A bare `a=` is not evaluated (no value typed yet).
-- Code blocks, tables and read-only documents are never modified.
+- 只有在**光标前**的文本以等号结尾、且等号前是完整的算式时才会结算；否则回车保持默认的换行行为。
+- 结算后光标停在结果末尾，块内容会通过思源的事务接口写回，因此**支持撤销**、也会同步到内核。
+- `==`、`>=`、`<=` 这类比较符不会被当成算式。
+- `a=` 这类只有变量名的写法不会结算（等号后面还没有数值）。
+- 代码块、表格、只读文档中的内容不会被修改。
 
-## Development
+## 开发
 
 ```bash
-node build.mjs                 # build index.js from src/ (zero dependencies)
-node test/number.probe.mjs     # arithmetic self-tests
-node test/precision.test.mjs   # result precision
-node test/polynomial.test.mjs  # polynomials and equation solving
-node test/calc.test.mjs        # expression-layer tests
-node test/plugin.test.mjs      # plugin integration tests (minimal DOM / SiYuan stubs)
-node tools/pack.mjs            # build package.zip
-node tools/verify-zip.mjs      # verify package.zip
+node build.mjs                 # 由 src/ 生成 index.js（零依赖打包）
+node test/number.probe.mjs     # 算术层自检
+node test/precision.test.mjs   # 结果精度
+node test/polynomial.test.mjs  # 多项式与方程求解
+node test/calc.test.mjs        # 表达式层测试
+node test/plugin.test.mjs      # 插件集成测试（最小 DOM / 思源 API 桩）
+node tools/pack.mjs            # 生成 package.zip
+node tools/verify-zip.mjs      # 校验 package.zip
+node tools/preflight.mjs       # 按集市规则自检
 ```
 
-Source layout:
+源码结构：
 
 ```
-src/index.js              plugin body (lifecycle, key interception, DOM write-back, settings)
-src/lib/number.mjs        decimal arithmetic (digit arrays, rationals, fixed point, complex)
-src/lib/precision.mjs     display precision (exact decimal rounding to places/digits)
-src/lib/polynomial.mjs    polynomial arithmetic and univariate equation solving
-src/lib/expr.mjs          tokenizer, parser, evaluator, settlement rules
-build.mjs                 bundles the ESM sources into the CommonJS plugin entry
+src/index.js              插件主体（生命周期、按键拦截、DOM 写回、设置面板）
+src/lib/number.mjs        十进制高精度算术（数字数组、有理数、定点数、复数）
+src/lib/precision.mjs     结果显示精度（小数位 / 有效数字的十进制舍入）
+src/lib/polynomial.mjs    多项式运算与一元方程求解
+src/lib/expr.mjs          词法/语法分析、求值、结算规则
+build.mjs                 把 ESM 源码打成插件用的 CommonJS bundle
 ```
 
-## Packaging
+## 打包发布
 
-`package.zip` must contain:
+`package.zip` 里需要包含：
 
 - `plugin.json`
 - `index.js`
 - `index.css`
 - `i18n/*`
 - `icon.png`
-- `README.md`, `README.zh-CN.md`
+- `README.md`、`README.en.md`
 
-## License
+发布流程见 [PUBLISH.md](./PUBLISH.md)。
+
+## 许可
 
 MIT

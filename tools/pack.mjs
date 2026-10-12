@@ -23,7 +23,7 @@ const INCLUDE = [
     "i18n/en.json",
     "i18n/zh-CN.json",
     "README.md",
-    "README.zh-CN.md"
+    "README.en.md"
 ];
 
 /* ---- CRC32 ---- */

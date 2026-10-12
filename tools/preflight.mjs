@@ -291,7 +291,7 @@ for (const file of ["LICENSE", "LICENSE.txt", "LICENSE.md", "COPYING"]) {
 }
 
 /* ---- 本地仓库文件是否齐全（发布 Release 时用） ---- */
-for (const file of ["README.md", "README.zh-CN.md", "plugin.json", "index.js", "index.css", "icon.png", "preview.png"]) {
+for (const file of ["README.md", "README.en.md", "plugin.json", "index.js", "index.css", "icon.png", "preview.png"]) {
     if (!existsSync(join(root, file))) {
         note(`本地缺少 ${file}（package.zip 里已有则不影响集市安装）`);
     }

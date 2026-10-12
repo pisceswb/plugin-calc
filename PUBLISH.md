@@ -89,7 +89,7 @@ preview.png
 i18n/zh-CN.json
 i18n/en.json
 README.md
-README.zh-CN.md
+README.en.md
 ```
 
 ---
