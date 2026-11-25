@@ -20,6 +20,8 @@ const MODULES = [
     {id: "lib/precision", path: "src/lib/precision.mjs"},
     {id: "lib/polynomial", path: "src/lib/polynomial.mjs"},
     {id: "lib/expr", path: "src/lib/expr.mjs"},
+    {id: "lib/notebook", path: "src/lib/notebook.mjs"},
+    {id: "lib/notebook-view", path: "src/notebook-view.js"},
     {id: "index", path: "src/index.js"}
 ];
 

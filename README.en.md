@@ -5,6 +5,14 @@
 A SiYuan plugin: type an expression ending with `=` and **press Enter** to get the result
 appended right after the equals sign.
 
+## Installation
+
+Download `plugin-calc.zip` from [this fork's Releases](https://github.com/ljq29/plugin-calc/releases/latest), extract it into the workspace's `data/plugins/`, and confirm that `data/plugins/plugin-calc/plugin.json` exists. Reload SiYuan and enable **Equals Calc** under **Settings → Bazaar → Downloaded**.
+
+For Docker, the container path is usually `/siyuan/workspace/data/plugins/plugin-calc/`. Install once on the server; browsers connecting to that instance do not need separate copies.
+
+The official Bazaar already lists `pisceswb/plugin-calc`. Enhancements in this fork are contributed through an upstream pull request rather than a duplicate Bazaar entry.
+
 ## Features
 
 | Type | After Enter |
@@ -16,6 +24,35 @@ appended right after the equals sign.
 
 Only text **before the caret** that ends with a complete expression plus `=` is evaluated.
 Any leading words or units are left untouched.
+
+## Calc notebooks
+
+Requires SiYuan **3.8.10 or later**. Type `/计算` (or filter with `/calc`) to insert a calc block. Changes are saved automatically about 300 ms after typing stops.
+
+```text
+单价=68
+数量=2
+运费=10
+
+商品金额：{{单价*数量}}
+含运费总价：{{单价*数量+运费}}
+单价*数量*0.8
+```
+
+- Define variables with `name=formula`. Unicode names, including Chinese, are supported; later lines can use earlier definitions
+- Variables are scoped to the current block. Editing a definition recalculates every dependent result
+- A standalone formula appears as `result (formula)`; ordinary text and blank lines stay unchanged
+- Use `{{formula}}` inside ordinary text. Undefined variables, division by zero, empty formulas and unclosed delimiters show errors
+- Toggle **隐藏公式 / 显示公式** to hide or show formulas while keeping results
+- Only the source template is stored in the custom block. Results are rendered live, and the source remains readable if the plugin is disabled or uninstalled
+
+### Three views
+
+The upper-right corner offers **上下** (vertical), **左右** (horizontal) and **逐行** (line-by-line) views. Horizontal is the default, with source on the left and results on the right.
+
+The selected view is stored in the block's `custom-plugin-calc-view` attribute. Each block remembers its own view across reloads, reopening and document synchronization.
+
+In line-by-line mode, every line shows results until clicked. Only the active line exposes its source; all other results update while typing. Enter splits a line, Backspace/Delete at the edges merge lines, Arrow Up/Down changes the active line, and Escape returns to results. Focus and caret survive autosave.
 
 ## Linear equations
 
@@ -110,16 +147,20 @@ node test/number.probe.mjs     # arithmetic self-tests
 node test/precision.test.mjs   # result precision
 node test/polynomial.test.mjs  # polynomials and equation solving
 node test/calc.test.mjs        # expression-layer tests
+node test/notebook.test.mjs    # calc notebook, variables and mixed-content tests
+node test/view.test.mjs        # three views and line-by-line editing tests
 node test/plugin.test.mjs      # plugin integration tests (minimal DOM / SiYuan stubs)
-node tools/pack.mjs            # build package.zip
-node tools/verify-zip.mjs      # verify package.zip
+node tools/pack.mjs            # build manual-install and Bazaar ZIPs
+node tools/verify-zip.mjs      # verify both ZIPs
 node tools/preflight.mjs       # check against bazaar rules
 ```
 
 Source layout:
 
 ```
-src/index.js              plugin body (lifecycle, key interception, DOM write-back, settings)
+src/index.js              plugin body (lifecycle, custom blocks, slash command, keys, settings)
+src/notebook-view.js      three views, line-by-line editing, preview and autosave
+src/lib/notebook.mjs      scoped variables, standalone formulas and inline evaluation model
 src/lib/number.mjs        decimal arithmetic (digit arrays, rationals, fixed point, complex)
 src/lib/precision.mjs     display precision (exact decimal rounding to places/digits)
 src/lib/polynomial.mjs    polynomial arithmetic and univariate equation solving

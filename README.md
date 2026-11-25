@@ -4,6 +4,18 @@
 
 思源笔记插件：在编辑器里输入以等号结尾的算式，**按回车**自动把结果补在等号后面。
 
+## 安装
+
+本增强分支的安装包发布在 [ljq29/plugin-calc Releases](https://github.com/ljq29/plugin-calc/releases/latest)：
+
+1. 下载 `plugin-calc.zip` 并解压到思源工作空间的 `data/plugins/`。
+2. 确认最终路径为 `<思源工作空间>/data/plugins/plugin-calc/plugin.json`。
+3. 重新加载思源，在「设置 → 集市 → 已下载」中启用「等号计算」。
+
+Docker 容器内的通常路径为 `/siyuan/workspace/data/plugins/plugin-calc/`，宿主机路径取决于卷映射。同一个 Docker 实例只需在服务器工作空间安装一次，访问它的浏览器无需分别复制插件；其他独立工作空间仍需分别安装。
+
+官方集市已经收录 `pisceswb/plugin-calc`。本分支的增强功能通过上游 PR 回馈，合并并由原作者发布后，可直接在集市中更新；不要再向 Bazaar 添加重复的 `ljq29/plugin-calc` 条目。
+
 ## 功能
 
 | 输入 | 按回车后 |
@@ -14,6 +26,53 @@
 | `12×5=60*3=` | `12×5=60*3=180` |
 
 只有「光标前、且以等号结尾」的算式会被结算，行首的中文、单位等文字都会原样保留。
+
+## 计算笔记本
+
+需要思源 **3.8.10 或更高版本**。在编辑器中输入 `/计算`（也可用 `/calc` 筛选），插入一个独立的计算块。停止输入约 300 毫秒后自动保存。
+
+```text
+单价=68
+数量=2
+运费=10
+
+商品金额：{{单价*数量}}
+含运费总价：{{单价*数量+运费}}
+单价*数量*0.8
+```
+
+预览结果：
+
+```text
+单价 = 68
+数量 = 2
+运费 = 10
+
+商品金额：136 (单价*数量)
+含运费总价：146 (单价*数量+运费)
+108.8 (单价*数量*0.8)
+```
+
+- `变量名=公式` 定义变量，支持中文变量名；后面的内容可以引用前面已定义的变量
+- 变量仅在当前计算块内有效；修改变量后，引用它的结果会自动重算
+- 独立公式行直接显示为 `结果 (计算公式)`；普通文字与空行原样保留
+- 普通文字中用 `{{公式}}` 嵌入结果；未定义变量、除零、空公式和未闭合标记会显示错误
+- 点击「隐藏公式」可只保留结果，再次点击可恢复公式
+- 只把原始模板保存到自定义块，计算结果由插件实时生成；停用或卸载插件后仍可读取原文
+
+### 三种视图
+
+块右上角提供「上下」「左右」「逐行」三个按钮。**默认使用左右视图**，左侧编辑原文、右侧显示结果；「上下」保留原文在上、结果在下的布局。
+
+视图选择写入当前块的 `custom-plugin-calc-view` 属性，每个块分别记忆，刷新、重新打开和文档同步后仍会保留。
+
+「逐行」是所见即所得模式：
+
+- 未点击时全部显示结果，点击某一行后在原位置编辑该行的原文
+- 修改当前行时，其他行的引用结果实时更新
+- `Enter` 拆分行，行首 `Backspace` 与行尾 `Delete` 可合并相邻行
+- `↑` / `↓` 切换编辑行，`Esc` 退出当前行编辑
+- 自动保存后继续编辑时，会保留当前行、焦点和光标位置
 
 ## 一元方程
 
@@ -99,16 +158,20 @@ node test/number.probe.mjs     # 算术层自检
 node test/precision.test.mjs   # 结果精度
 node test/polynomial.test.mjs  # 多项式与方程求解
 node test/calc.test.mjs        # 表达式层测试
+node test/notebook.test.mjs    # 计算笔记本、变量与混排测试
+node test/view.test.mjs        # 三种视图与逐行编辑测试
 node test/plugin.test.mjs      # 插件集成测试（最小 DOM / 思源 API 桩）
-node tools/pack.mjs            # 生成 package.zip
-node tools/verify-zip.mjs      # 校验 package.zip
+node tools/pack.mjs            # 生成手动安装包与官方集市包
+node tools/verify-zip.mjs      # 校验两个 ZIP
 node tools/preflight.mjs       # 按集市规则自检
 ```
 
 源码结构：
 
 ```
-src/index.js              插件主体（生命周期、按键拦截、DOM 写回、设置面板）
+src/index.js              插件主体（生命周期、自定义块、斜杠命令、按键拦截、设置面板）
+src/notebook-view.js      三种视图、逐行编辑、预览与自动保存
+src/lib/notebook.mjs      块内变量、独立公式与行内混排的求值模型
 src/lib/number.mjs        十进制高精度算术（数字数组、有理数、定点数、复数）
 src/lib/precision.mjs     结果显示精度（小数位 / 有效数字的十进制舍入）
 src/lib/polynomial.mjs    多项式运算与一元方程求解

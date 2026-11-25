@@ -2,8 +2,8 @@
   "name": "plugin-calc",
   "author": "pisceswb",
   "url": "https://github.com/pisceswb/plugin-calc",
-  "version": "0.3.0",
-  "minAppVersion": "3.0.0",
+  "version": "0.5.0",
+  "minAppVersion": "3.8.10",
   "backends": [
     "all"
   ],
@@ -16,8 +16,8 @@
     "zh-CN": "等号计算"
   },
   "description": {
-    "default": "Type an expression ending with = and press Enter to get the result, e.g. 12*5= becomes 12*5=60. Also solves simple equations such as x+3=5=",
-    "zh-CN": "输入以等号结尾的算式后按回车自动算出结果，例如输入 12*5= 按回车得到 12*5=60；也支持 x+3=5= 这类一元方程"
+    "default": "Evaluate expressions ending with =, or insert a calc notebook with variables, inline formulas and per-block vertical, horizontal or line-by-line views",
+    "zh-CN": "输入以等号结尾的算式后按回车自动结算；通过 /计算 插入支持变量与文字混排的笔记本，可切换上下、左右和逐行所见即所得视图"
   },
   "readme": {
     "default": "README.md",

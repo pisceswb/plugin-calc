@@ -82,8 +82,11 @@ const OPERATOR_ALIAS = {
  * 这个字符可以出现在待计算表达式里吗。
  * 等号也算在内，否则行内赋值 "a=3;a*2=" 往前收集时会在第一个等号处断开。
  */
+const isNameStart = (ch) => /^[\p{L}_]$/u.test(ch || "");
+const isNameChar = (ch) => /^[\p{L}\p{N}_]$/u.test(ch || "");
+
 const isExprChar = (ch) => {
-    if (/[0-9a-zA-Z_]/.test(ch)) {
+    if (isNameChar(ch)) {
         return true;
     }
     if ("+-*/%^().,;_ \t\u00a0=".indexOf(ch) > -1) {
@@ -165,9 +168,9 @@ const tokenize = (source) => {
             tokens.push({type: T_NUM, text: text, start: start, end: i});
             continue;
         }
-        if (/[A-Za-z_]/.test(ch)) {
+        if (isNameStart(ch)) {
             let text = "";
-            while (i < source.length && /[A-Za-z0-9_]/.test(source[i])) {
+            while (i < source.length && isNameChar(source[i])) {
                 text += source[i];
                 i++;
             }
@@ -892,17 +895,18 @@ const numberToRat = (value) => fixToRat(numberToFix(value));
  * 计算一个不含结尾等号的表达式。
  *
  * @param {string} source 例如 "12×5"、"a=3;a*2"、"a+3=5;a"
- * @param {{roundMode?:string, roundDigits?:number|string}} [options] 结果显示精度
+ * @param {{roundMode?:string, roundDigits?:number|string, maxLength?:number}} [options] 结果显示精度与长度限制
  * @returns {{ok:true, text:string, assignments:Array}|{ok:false, error:string, position:number}}
  */
 export const calculate = (source, options) => {
     try {
-        if (typeof source !== "string" || source.length > 500) {
+        const maxLength = options && Number.isFinite(options.maxLength) ? options.maxLength : 500;
+        if (typeof source !== "string" || source.length > maxLength) {
             throw new Error("expression too long");
         }
         // "a=" 这类只剩变量名的写法还没有可计算的内容（等号后面还没输入数值），不结算
         const trimmed = source.trim();
-        if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(trimmed) && !isConstantName(trimmed.toLowerCase())) {
+        if (isNameStart(trimmed[0]) && Array.from(trimmed).every(isNameChar) && !isConstantName(trimmed.toLowerCase())) {
             return {ok: false, error: "incomplete assignment", position: -1};
         }
         const policy = normalizePolicy(options);
@@ -986,7 +990,7 @@ const isExprStartChar = (ch) => {
     if (ch === undefined || ch === "") {
         return false;
     }
-    if (/[0-9a-zA-Z_(.+-]/.test(ch)) {
+    if (/[0-9_(.+-]/.test(ch) || isNameStart(ch)) {
         return true;
     }
     if (ch === "（") {
@@ -999,7 +1003,7 @@ const isExprStartChar = (ch) => {
 /** 表达式结束位置的下一个字符不能是比较符，否则 "5>=3=" 会被算成 "3" */
 const isComparisonBefore = (ch) => ch === "=" || ch === ">" || ch === "<" || ch === "!" || ch === "＝";
 
-const isDigitsOrNameChar = (ch) => /[0-9a-zA-Z_.]/.test(ch) ||
+const isDigitsOrNameChar = (ch) => /[0-9.]/.test(ch) || isNameChar(ch) ||
     (FULLWIDTH_MAP[ch] !== undefined && /[0-9.]/.test(FULLWIDTH_MAP[ch]));
 
 /**
@@ -1031,7 +1035,7 @@ export const findCalculation = (text, options) => {
     }
     // 结尾等号前的字符必须是操作数（数字/字母/右括号/百分号），否则只是敲了个符号
     const before = text[text.length - 2];
-    const beforeIsOperand = before !== undefined && (/[0-9a-zA-Z_)）.．%]/.test(before) ||
+    const beforeIsOperand = before !== undefined && (/[0-9_)）.．%]/.test(before) || isNameChar(before) ||
         (FULLWIDTH_MAP[before] !== undefined && /[0-9%]/.test(FULLWIDTH_MAP[before])));
     if (!beforeIsOperand) {
         return null;
@@ -1044,7 +1048,7 @@ export const findCalculation = (text, options) => {
         const prev = i > 0 ? prefix[i - 1] : "";
         if (isDigitsOrNameChar(ch)) {
             // 字母和数字连写（abc12）时，数字处也可以作为表达式起点
-            const prevIsName = /[a-zA-Z_]/.test(prev);
+            const prevIsName = isNameStart(prev);
             const chIsDigit = /[0-9]/.test(ch) ||
                 (FULLWIDTH_MAP[ch] !== undefined && /[0-9]/.test(FULLWIDTH_MAP[ch]));
             if (i === 0 || !isDigitsOrNameChar(prev) || (prevIsName && chIsDigit)) {
@@ -1188,7 +1192,7 @@ export const __test__ = {
             const ch = prefix[i];
             const prev = i > 0 ? prefix[i - 1] : "";
             if (isDigitsOrNameChar(ch)) {
-                const prevIsName = /[a-zA-Z_]/.test(prev);
+                const prevIsName = isNameStart(prev);
                 const chIsDigit = /[0-9]/.test(ch) ||
                     (FULLWIDTH_MAP[ch] !== undefined && /[0-9]/.test(FULLWIDTH_MAP[ch]));
                 if (i === 0 || !isDigitsOrNameChar(prev) || (prevIsName && chIsDigit)) {

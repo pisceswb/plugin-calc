@@ -470,6 +470,8 @@ class StubPlugin {
         this.i18n = options.i18n;
         this.data = {};
         this.setting = null;
+        this.customBlockRenders = {};
+        this.protyleSlash = [];
     }
     async loadData() {
         return {};
@@ -588,8 +590,10 @@ const buildEditor = (blockText) => {
 /** 用 updateTransactionElement 记录事务，模拟内核落库 */
 const makeProtyleInstance = (protyleElement) => {
     const protyle = {
-        element: protyleElement,
-        getInstance: () => protyle,
+        protyle: {
+            element: protyleElement,
+            getInstance: () => protyle
+        },
         updateTransactionElement: (element, oldHTML) => {
             transactions.push({id: element.getAttribute("data-node-id"), newHTML: element.outerHTML, oldHTML});
         }
@@ -662,7 +666,16 @@ const runCase = async (input, options = {}) => {
     range.collapse();
     currentRange = range;
 
-    const event = pressEnter(plugin, dom.editable);
+    let target = dom.editable;
+    if (options.notebookTarget) {
+        const notebook = new StubElement("section");
+        notebook.classList.add("plugin-calc-notebook");
+        target = new StubElement("textarea");
+        target.classList.add("plugin-calc-notebook__editor");
+        notebook.appendChild(target);
+        dom.wysiwyg.appendChild(notebook);
+    }
+    const event = pressEnter(plugin, target);
     plugin.onunload();
     return {
         text: dom.editable.textContent,
@@ -747,6 +760,25 @@ const ioPlugin = new PluginClass({
     }
 });
 await ioPlugin.onload();
+
+// 计算笔记本通过自定义块保存原文，斜杠命令负责插入模板。
+eq(typeof ioPlugin.customBlockRenders.notebook.render, "function", "注册计算笔记本渲染器");
+const notebookSlash = ioPlugin.protyleSlash.find(item => item.id === "calc-notebook");
+eq(!!notebookSlash, true, "注册 /计算 斜杠命令");
+eq(notebookSlash.filter.includes("计算"), true, "斜杠命令支持中文筛选");
+let insertedMarkdown = "";
+notebookSlash.callback({insert: markdown => {
+    insertedMarkdown = markdown;
+}});
+eq(insertedMarkdown.startsWith(";;;plugin-calc/notebook\n"), true, "插入 NodeCustomBlock 模板");
+eq(insertedMarkdown.includes("商品金额：{{单价*数量}}"), true, "默认模板包含中文变量与行内公式");
+eq(insertedMarkdown.endsWith("\n;;;"), true, "自定义块模板闭合");
+
+// 计算块的 textarea 自己处理回车，不能触发普通段落的等号结算。
+const notebookKey = await runCase("12*5=", {notebookTarget: true});
+eq(notebookKey.text, "12*5=", "计算块内回车不修改其它段落");
+eq(notebookKey.prevented, false, "计算块内回车不被等号结算拦截");
+eq(notebookKey.transactions.length, 0, "计算块内回车不产生普通段落事务");
 
 // 插件不占用顶栏：不注册图标、不加顶栏按钮。
 // 设置入口由思源根据 openSetting 生成（顶栏插件菜单 →「等号计算」）。

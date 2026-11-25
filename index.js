@@ -1158,8 +1158,11 @@ const OPERATOR_ALIAS = {
  * 这个字符可以出现在待计算表达式里吗。
  * 等号也算在内，否则行内赋值 "a=3;a*2=" 往前收集时会在第一个等号处断开。
  */
+const isNameStart = (ch) => /^[\p{L}_]$/u.test(ch || "");
+const isNameChar = (ch) => /^[\p{L}\p{N}_]$/u.test(ch || "");
+
 const isExprChar = (ch) => {
-    if (/[0-9a-zA-Z_]/.test(ch)) {
+    if (isNameChar(ch)) {
         return true;
     }
     if ("+-*/%^().,;_ \t\u00a0=".indexOf(ch) > -1) {
@@ -1241,9 +1244,9 @@ const tokenize = (source) => {
             tokens.push({type: T_NUM, text: text, start: start, end: i});
             continue;
         }
-        if (/[A-Za-z_]/.test(ch)) {
+        if (isNameStart(ch)) {
             let text = "";
-            while (i < source.length && /[A-Za-z0-9_]/.test(source[i])) {
+            while (i < source.length && isNameChar(source[i])) {
                 text += source[i];
                 i++;
             }
@@ -1968,17 +1971,18 @@ const numberToRat = (value) => fixToRat(numberToFix(value));
  * 计算一个不含结尾等号的表达式。
  *
  * @param {string} source 例如 "12×5"、"a=3;a*2"、"a+3=5;a"
- * @param {{roundMode?:string, roundDigits?:number|string}} [options] 结果显示精度
+ * @param {{roundMode?:string, roundDigits?:number|string, maxLength?:number}} [options] 结果显示精度与长度限制
  * @returns {{ok:true, text:string, assignments:Array}|{ok:false, error:string, position:number}}
  */
 const calculate = (source, options) => {
     try {
-        if (typeof source !== "string" || source.length > 500) {
+        const maxLength = options && Number.isFinite(options.maxLength) ? options.maxLength : 500;
+        if (typeof source !== "string" || source.length > maxLength) {
             throw new Error("expression too long");
         }
         // "a=" 这类只剩变量名的写法还没有可计算的内容（等号后面还没输入数值），不结算
         const trimmed = source.trim();
-        if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(trimmed) && !isConstantName(trimmed.toLowerCase())) {
+        if (isNameStart(trimmed[0]) && Array.from(trimmed).every(isNameChar) && !isConstantName(trimmed.toLowerCase())) {
             return {ok: false, error: "incomplete assignment", position: -1};
         }
         const policy = normalizePolicy(options);
@@ -2062,7 +2066,7 @@ const isExprStartChar = (ch) => {
     if (ch === undefined || ch === "") {
         return false;
     }
-    if (/[0-9a-zA-Z_(.+-]/.test(ch)) {
+    if (/[0-9_(.+-]/.test(ch) || isNameStart(ch)) {
         return true;
     }
     if (ch === "（") {
@@ -2075,7 +2079,7 @@ const isExprStartChar = (ch) => {
 /** 表达式结束位置的下一个字符不能是比较符，否则 "5>=3=" 会被算成 "3" */
 const isComparisonBefore = (ch) => ch === "=" || ch === ">" || ch === "<" || ch === "!" || ch === "＝";
 
-const isDigitsOrNameChar = (ch) => /[0-9a-zA-Z_.]/.test(ch) ||
+const isDigitsOrNameChar = (ch) => /[0-9.]/.test(ch) || isNameChar(ch) ||
     (FULLWIDTH_MAP[ch] !== undefined && /[0-9.]/.test(FULLWIDTH_MAP[ch]));
 
 /**
@@ -2107,7 +2111,7 @@ const findCalculation = (text, options) => {
     }
     // 结尾等号前的字符必须是操作数（数字/字母/右括号/百分号），否则只是敲了个符号
     const before = text[text.length - 2];
-    const beforeIsOperand = before !== undefined && (/[0-9a-zA-Z_)）.．%]/.test(before) ||
+    const beforeIsOperand = before !== undefined && (/[0-9_)）.．%]/.test(before) || isNameChar(before) ||
         (FULLWIDTH_MAP[before] !== undefined && /[0-9%]/.test(FULLWIDTH_MAP[before])));
     if (!beforeIsOperand) {
         return null;
@@ -2120,7 +2124,7 @@ const findCalculation = (text, options) => {
         const prev = i > 0 ? prefix[i - 1] : "";
         if (isDigitsOrNameChar(ch)) {
             // 字母和数字连写（abc12）时，数字处也可以作为表达式起点
-            const prevIsName = /[a-zA-Z_]/.test(prev);
+            const prevIsName = isNameStart(prev);
             const chIsDigit = /[0-9]/.test(ch) ||
                 (FULLWIDTH_MAP[ch] !== undefined && /[0-9]/.test(FULLWIDTH_MAP[ch]));
             if (i === 0 || !isDigitsOrNameChar(prev) || (prevIsName && chIsDigit)) {
@@ -2264,7 +2268,7 @@ const __test__ = {
             const ch = prefix[i];
             const prev = i > 0 ? prefix[i - 1] : "";
             if (isDigitsOrNameChar(ch)) {
-                const prevIsName = /[a-zA-Z_]/.test(prev);
+                const prevIsName = isNameStart(prev);
                 const chIsDigit = /[0-9]/.test(ch) ||
                     (FULLWIDTH_MAP[ch] !== undefined && /[0-9]/.test(FULLWIDTH_MAP[ch]));
                 if (i === 0 || !isDigitsOrNameChar(prev) || (prevIsName && chIsDigit)) {
@@ -2277,12 +2281,491 @@ const __test__ = {
         return starts;
     }
 };
+
     module.exports = {
     "calculate": calculate,
     "findCalculation": findCalculation,
     "settleText": settleText,
     "applyCalculation": applyCalculation,
     "__test__": __test__
+    };
+    };
+
+    /* ---------------- src/lib/notebook.mjs ---------------- */
+    __registry["lib/notebook"] = function (module, exports, __require) {
+const {calculate} = __require("lib/expr");
+
+const DEFINITION_PATTERN = /^([\p{L}_][\p{L}\p{N}_]*)\s*=\s*(.*)$/u;
+const NAME_PATTERN = /^[\p{L}_][\p{L}\p{N}_]*$/u;
+const CALC_OPTIONS = {maxLength: 10000};
+
+const evaluate = (expression, definitions, options) => {
+    const source = definitions.concat(expression).join(";");
+    return calculate(source, Object.assign({}, options, CALC_OPTIONS));
+};
+
+const resultOf = (expression, definitions, options) => {
+    const result = evaluate(expression, definitions, options);
+    return result.ok ? {ok: true, value: result.text} : {ok: false, error: result.error};
+};
+
+const parseInline = (line, definitions, options) => {
+    const parts = [];
+    let cursor = 0;
+    const appendText = end => {
+        if (end > cursor) {
+            parts.push({kind: "text", text: line.slice(cursor, end)});
+        }
+    };
+    while (cursor < line.length) {
+        const open = line.indexOf("{{", cursor);
+        const close = line.indexOf("}}", cursor);
+        if (close > -1 && (open === -1 || close < open)) {
+            appendText(close);
+            parts.push({kind: "error", error: "缺少 {{"});
+            cursor = close + 2;
+            continue;
+        }
+        if (open === -1) {
+            appendText(line.length);
+            break;
+        }
+        appendText(open);
+        const end = line.indexOf("}}", open + 2);
+        if (end === -1) {
+            parts.push({kind: "error", error: "缺少 }}"});
+            break;
+        }
+        const expression = line.slice(open + 2, end).trim();
+        parts.push(Object.assign({kind: "calculation", source: line.slice(open, end + 2), expression},
+            expression ? resultOf(expression, definitions, options) : {ok: false, error: "公式为空"}));
+        cursor = end + 2;
+    }
+    return parts;
+};
+
+const looksLikeFormula = (line, definitions) => {
+    if (/^[0-9./*^%()]/.test(line) || (/^[+-]/.test(line) && !/^[+-]\s/.test(line)) ||
+        (/\d/.test(line) && /[+\-*/^%]/.test(line)) ||
+        /^[A-Za-z_][A-Za-z0-9_]*\s*\(/.test(line) ||
+        /^[A-Za-z_][A-Za-z0-9_]*(?:\s*[+\-*/^%]\s*[A-Za-z_][A-Za-z0-9_]*)+$/.test(line)) {
+        return true;
+    }
+    return definitions.some(definition => {
+        const name = definition.slice(0, definition.indexOf("=")).trim();
+        return new RegExp("(?<![\\p{L}\\p{N}_])" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
+            "(?![\\p{L}\\p{N}_])", "u").test(line);
+    });
+};
+
+const evaluateNotebook = (source, options = {}) => {
+    const lines = String(source || "").replace(/\r\n?/g, "\n").split("\n");
+    const definitions = [];
+    return lines.map(line => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+            return {kind: "blank", source: line};
+        }
+        const definition = trimmed.match(DEFINITION_PATTERN);
+        if (definition) {
+            const name = definition[1];
+            const expression = definition[2].trim();
+            const result = expression ? resultOf(expression, definitions, options) :
+                {ok: false, error: "缺少变量值或公式"};
+            if (result.ok) {
+                definitions.push(name + "=" + expression);
+            }
+            return {kind: "definition", source: line, name, expression, result};
+        }
+        if (trimmed.includes("{{") || trimmed.includes("}}")) {
+            const parts = parseInline(line, definitions, options);
+            if (parts) {
+                return {kind: "inline", source: line, parts};
+            }
+            return {kind: "inline", source: line, parts: [
+                {kind: "text", text: line},
+                {kind: "error", error: "缺少 }}"}
+            ]};
+        }
+        let expression = trimmed;
+        if (NAME_PATTERN.test(trimmed) && definitions.some(item => item.startsWith(trimmed + "="))) {
+            expression = trimmed + "*1";
+        }
+        const result = resultOf(expression, definitions, options);
+        if (result.ok || looksLikeFormula(trimmed, definitions)) {
+            return {kind: "formula", source: line, expression: trimmed, result};
+        }
+        return {kind: "text", source: line};
+    });
+};
+
+    module.exports = {
+    "evaluateNotebook": evaluateNotebook
+    };
+    };
+
+    /* ---------------- src/notebook-view.js ---------------- */
+    __registry["lib/notebook-view"] = function (module, exports, __require) {
+const {evaluateNotebook} = __require("lib/notebook");
+
+const viewStates = new WeakMap();
+const VIEW_ATTRIBUTE = "custom-plugin-calc-view";
+const VIEW_MODES = [
+    {id: "vertical", label: "上下"},
+    {id: "horizontal", label: "左右"},
+    {id: "live", label: "逐行"}
+];
+
+const renderCalcNotebook = (options, precisionOptions) => {
+    const document = options.element.ownerDocument;
+    const blockElement = options.element.closest("[data-type=\"NodeCustomBlock\"]");
+    const stateElement = blockElement || options.element;
+    const state = viewStates.get(stateElement) || {showFormula: true, mode: "horizontal", activeLine: null};
+    const savedMode = blockElement?.getAttribute(VIEW_ATTRIBUTE);
+    if (VIEW_MODES.some(item => item.id === savedMode)) {
+        state.mode = savedMode;
+    }
+    viewStates.set(stateElement, state);
+    let source = options.content;
+    let saveTimer = null;
+    let disposed = false;
+    let activeLine = Number.isInteger(state.activeLine) ? state.activeLine : null;
+    let root;
+    let status;
+
+    const updateStatus = text => {
+        if (status) {
+            status.textContent = text;
+        }
+    };
+    const appendFormula = (row, expression) => {
+        if (!state.showFormula || !expression) {
+            return;
+        }
+        const formula = document.createElement("span");
+        formula.className = "plugin-calc-notebook__formula";
+        formula.textContent = "(" + expression + ")";
+        row.append(formula);
+    };
+    const appendResult = (row, expression, result, definition = false) => {
+        if (!result.ok) {
+            const error = document.createElement("span");
+            error.className = "plugin-calc-notebook__error";
+            error.textContent = "错误：" + result.error;
+            row.append(error);
+            return;
+        }
+        const value = document.createElement("strong");
+        value.className = "plugin-calc-notebook__result";
+        value.textContent = result.value;
+        row.append(value);
+        if (!definition || expression !== result.value) {
+            appendFormula(row, expression);
+        }
+    };
+    const renderLine = (row, line) => {
+        row.className = "plugin-calc-notebook__line plugin-calc-notebook__line--" + line.kind;
+        if (line.kind === "blank" || line.kind === "text") {
+            row.textContent = line.kind === "blank" ? "" : line.source;
+            return;
+        }
+        if (line.kind === "definition") {
+            const name = document.createElement("span");
+            name.className = "plugin-calc-notebook__name";
+            name.textContent = line.name + " = ";
+            row.append(name);
+            appendResult(row, line.expression, line.result, true);
+            return;
+        }
+        if (line.kind === "formula") {
+            appendResult(row, line.expression, line.result);
+            return;
+        }
+        line.parts.forEach(part => {
+            if (part.kind === "text") {
+                row.append(document.createTextNode(part.text));
+            } else if (part.kind === "error") {
+                const error = document.createElement("span");
+                error.className = "plugin-calc-notebook__error";
+                error.textContent = "错误：" + part.error;
+                row.append(error);
+            } else {
+                appendResult(row, part.expression, part);
+            }
+        });
+    };
+    const currentEditor = () => root.querySelector("textarea");
+    const focusEditor = (editor, caret) => {
+        if (!editor) {
+            return;
+        }
+        editor.focus();
+        const position = Math.min(caret ?? editor.value.length, editor.value.length);
+        editor.setSelectionRange(position, position);
+    };
+    const scheduleSave = () => {
+        updateStatus("");
+        if (saveTimer) {
+            clearTimeout(saveTimer);
+        }
+        saveTimer = setTimeout(() => {
+            if (disposed) {
+                return;
+            }
+            const editor = currentEditor();
+            const active = document.activeElement === editor;
+            const selectionStart = editor ? editor.selectionStart : 0;
+            state.activeLine = activeLine;
+            state.saving = true;
+            if (!options.setContent(source)) {
+                state.saving = false;
+                updateStatus("内容暂未保存，请检查只读状态或输入内容");
+                return;
+            }
+            if (active) {
+                queueMicrotask(() => {
+                    const nextEditor = (blockElement || options.element).querySelector("textarea");
+                    focusEditor(nextEditor, selectionStart);
+                    state.saving = false;
+                });
+            } else {
+                state.saving = false;
+            }
+        }, 300);
+    };
+    const resize = editor => {
+        editor.style.height = "auto";
+        editor.style.height = Math.max(120, editor.scrollHeight) + "px";
+    };
+    const createPreview = () => {
+        const preview = document.createElement("div");
+        preview.className = "plugin-calc-notebook__preview";
+        evaluateNotebook(source, precisionOptions).forEach(line => {
+            const row = document.createElement("div");
+            renderLine(row, line);
+            preview.append(row);
+        });
+        return preview;
+    };
+    const persistMode = () => {
+        if (!blockElement) {
+            return;
+        }
+        const id = blockElement.getAttribute("data-node-id");
+        blockElement.setAttribute(VIEW_ATTRIBUTE, state.mode);
+        fetch("/api/attr/setBlockAttrs", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({id, attrs: {[VIEW_ATTRIBUTE]: state.mode}})
+        }).then(response => response.json()).then(result => {
+            if (result.code !== 0) {
+                throw new Error(result.msg || "setBlockAttrs failed");
+            }
+        }).catch(error => {
+            console.error("[plugin-calc] 保存视图模式失败", error);
+            updateStatus("视图选择暂未保存");
+        });
+    };
+    const setActiveLine = (index, caret) => {
+        activeLine = index;
+        state.activeLine = index;
+        renderLive();
+        focusEditor(currentEditor(), caret);
+    };
+    const updateLiveSource = (lines, index, caret) => {
+        source = lines.join("\n");
+        activeLine = index;
+        state.activeLine = index;
+        renderLive();
+        focusEditor(currentEditor(), caret);
+        scheduleSave();
+    };
+    const bindLiveEditor = (editor, index) => {
+        editor.addEventListener("input", () => {
+            const chunks = editor.value.split("\n");
+            if (chunks.length > 1) {
+                const lines = source.split("\n");
+                lines.splice(index, 1, ...chunks);
+                updateLiveSource(lines, index + chunks.length - 1, chunks[chunks.length - 1].length);
+                return;
+            }
+            const lines = source.split("\n");
+            lines[index] = editor.value;
+            source = lines.join("\n");
+            const evaluated = evaluateNotebook(source, precisionOptions);
+            [...root.querySelectorAll(".plugin-calc-notebook__live > .plugin-calc-notebook__line")].forEach((row, rowIndex) => {
+                if (rowIndex !== activeLine && evaluated[rowIndex]) {
+                    row.replaceChildren();
+                    renderLine(row, evaluated[rowIndex]);
+                }
+            });
+            editor.style.height = "auto";
+            editor.style.height = Math.max(30, editor.scrollHeight) + "px";
+            scheduleSave();
+        });
+        editor.addEventListener("keydown", event => {
+            if (event.isComposing) {
+                return;
+            }
+            const lines = source.split("\n");
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            if (event.key === "Enter") {
+                event.preventDefault();
+                const before = editor.value.slice(0, start);
+                const after = editor.value.slice(end);
+                lines[index] = before;
+                lines.splice(index + 1, 0, after);
+                updateLiveSource(lines, index + 1, 0);
+            } else if (event.key === "ArrowUp" && index > 0) {
+                event.preventDefault();
+                setActiveLine(index - 1, Math.min(start, lines[index - 1].length));
+            } else if (event.key === "ArrowDown" && index < lines.length - 1) {
+                event.preventDefault();
+                setActiveLine(index + 1, Math.min(start, lines[index + 1].length));
+            } else if (event.key === "Backspace" && start === 0 && end === 0 && index > 0) {
+                event.preventDefault();
+                const caret = lines[index - 1].length;
+                lines[index - 1] += lines[index];
+                lines.splice(index, 1);
+                updateLiveSource(lines, index - 1, caret);
+            } else if (event.key === "Delete" && start === editor.value.length && end === start && index < lines.length - 1) {
+                event.preventDefault();
+                const caret = lines[index].length;
+                lines[index] += lines[index + 1];
+                lines.splice(index + 1, 1);
+                updateLiveSource(lines, index, caret);
+            } else if (event.key === "Escape") {
+                event.preventDefault();
+                activeLine = null;
+                state.activeLine = null;
+                renderLive();
+            }
+        });
+        editor.addEventListener("blur", () => {
+            setTimeout(() => {
+                if (disposed || state.saving || !root.isConnected || root.contains(document.activeElement)) {
+                    return;
+                }
+                activeLine = null;
+                state.activeLine = null;
+                renderLive();
+            }, 0);
+        });
+    };
+    function renderLive() {
+        const live = root.querySelector(".plugin-calc-notebook__live");
+        const evaluated = evaluateNotebook(source, precisionOptions);
+        if (activeLine !== null) {
+            activeLine = Math.max(0, Math.min(activeLine, evaluated.length - 1));
+            state.activeLine = activeLine;
+        }
+        live.replaceChildren();
+        evaluated.forEach((line, index) => {
+            const row = document.createElement("div");
+            renderLine(row, line);
+            row.dataset.lineIndex = String(index);
+            if (index === activeLine) {
+                row.classList.add("plugin-calc-notebook__line--editing");
+                row.replaceChildren();
+                const editor = document.createElement("textarea");
+                editor.className = "plugin-calc-notebook__live-editor";
+                editor.setAttribute("aria-label", `计算笔记本第 ${index + 1} 行原文`);
+                editor.spellcheck = false;
+                editor.rows = 1;
+                editor.value = line.source;
+                row.append(editor);
+                bindLiveEditor(editor, index);
+            } else {
+                row.addEventListener("click", () => setActiveLine(index, line.source.length));
+            }
+            live.append(row);
+        });
+        const editor = currentEditor();
+        if (editor) {
+            editor.style.height = "auto";
+            editor.style.height = Math.max(30, editor.scrollHeight) + "px";
+        }
+    }
+    const renderShell = () => {
+        root.replaceChildren();
+        root.className = `plugin-calc-notebook plugin-calc-notebook--${state.mode}`;
+        root.dataset.view = state.mode;
+        const header = document.createElement("div");
+        header.className = "plugin-calc-notebook__header";
+        const title = document.createElement("strong");
+        title.textContent = "计算笔记本";
+        const controls = document.createElement("div");
+        controls.className = "plugin-calc-notebook__controls";
+        VIEW_MODES.forEach(item => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "b3-button b3-button--text plugin-calc-notebook__view-button";
+            button.textContent = item.label;
+            button.dataset.view = item.id;
+            button.setAttribute("aria-pressed", String(state.mode === item.id));
+            button.title = {vertical: "上下编辑与预览", horizontal: "左右编辑与预览", live: "仅编辑光标所在行"}[item.id];
+            button.addEventListener("click", () => {
+                state.mode = item.id;
+                activeLine = null;
+                state.activeLine = null;
+                persistMode();
+                renderShell();
+            });
+            controls.append(button);
+        });
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "b3-button b3-button--text";
+        toggle.textContent = state.showFormula ? "隐藏公式" : "显示公式";
+        toggle.setAttribute("aria-pressed", String(state.showFormula));
+        toggle.addEventListener("click", () => {
+            state.showFormula = !state.showFormula;
+            renderShell();
+        });
+        controls.append(toggle);
+        header.append(title, controls);
+        root.append(header);
+        status = document.createElement("div");
+        status.className = "plugin-calc-notebook__status";
+        status.setAttribute("role", "status");
+        if (state.mode === "live") {
+            const live = document.createElement("div");
+            live.className = "plugin-calc-notebook__live";
+            root.append(live, status);
+            renderLive();
+            return;
+        }
+        const body = document.createElement("div");
+        body.className = "plugin-calc-notebook__body";
+        const editor = document.createElement("textarea");
+        editor.className = "plugin-calc-notebook__editor";
+        editor.setAttribute("aria-label", "计算笔记本原文");
+        editor.spellcheck = false;
+        editor.value = source;
+        editor.addEventListener("input", () => {
+            source = editor.value;
+            body.querySelector(".plugin-calc-notebook__preview").replaceWith(createPreview());
+            resize(editor);
+            scheduleSave();
+        });
+        body.append(editor, createPreview());
+        root.append(body, status);
+        resize(editor);
+    };
+    root = document.createElement("section");
+    options.element.replaceChildren(root);
+    renderShell();
+    return () => {
+        disposed = true;
+        if (saveTimer) {
+            clearTimeout(saveTimer);
+        }
+    };
+};
+
+    module.exports = {
+    "renderCalcNotebook": renderCalcNotebook
     };
     };
 
@@ -2306,9 +2789,18 @@ const __test__ = {
 
 const {Plugin, getAllEditor, Setting, showMessage} = __require("siyuan");
 const {settleText} = __require("lib/expr");
+const {renderCalcNotebook} = __require("lib/notebook-view");
 
 /** 设置存储文件名 */
 const STORAGE_NAME = "settings";
+const NOTEBOOK_MARKDOWN = `;;;plugin-calc/notebook
+单价=68
+数量=2
+运费=10
+
+商品金额：{{单价*数量}}
+含运费总价：{{单价*数量+运费}}
+;;;`;
 
 const DEFAULT_SETTINGS = {
     enabled: true,
@@ -2331,6 +2823,17 @@ class EqualsCalcPlugin extends Plugin {
 
     async onload() {
         await this.loadSettings();
+        this.customBlockRenders.notebook = {
+            render: options => renderCalcNotebook(options, this.getPrecisionOptions())
+        };
+        this.protyleSlash.push({
+            id: "calc-notebook",
+            filter: ["计算", "计算笔记本", "算式", "calc", "calc notebook", "js"],
+            html: "<span class=\"plugin-calc-slash\">∑<span>计算笔记本</span></span>",
+            callback: protyle => {
+                protyle.insert(NOTEBOOK_MARKDOWN, true, true);
+            }
+        });
 
         // 捕获阶段监听：Protyle 自身的 keydown 在冒泡阶段，
         // 放在捕获阶段才能保证「回车」先经过本插件。
@@ -2500,7 +3003,7 @@ class EqualsCalcPlugin extends Plugin {
         }
 
         const target = event.target;
-        if (!target || typeof target.closest !== "function") {
+        if (!target || typeof target.closest !== "function" || target.closest(".plugin-calc-notebook")) {
             return;
         }
         const editorElement = target.closest(".protyle-wysiwyg");
@@ -2598,7 +3101,8 @@ class EqualsCalcPlugin extends Plugin {
     commitChange(blockElement, oldHTML) {
         const id = blockElement.getAttribute("data-node-id");
         const protyle = this.findProtyle(blockElement);
-        const instance = protyle && typeof protyle.getInstance === "function" ? protyle.getInstance() : null;
+        const instance = protyle && (typeof protyle.updateTransactionElement === "function" ||
+            typeof protyle.updateTransaction === "function") ? protyle : null;
         if (!instance) {
             // 找不到编辑器实例时至少保证 DOM 是对的，下次输入会同步
             console.warn(`[${this.name}] 未找到 Protyle 实例，本次修改可能未持久化`);
@@ -2631,7 +3135,7 @@ class EqualsCalcPlugin extends Plugin {
     findProtyleByElement(protyleElement) {
         const editors = getAllEditor() || [];
         for (const protyle of editors) {
-            if (protyle && protyle.element === protyleElement) {
+            if (protyle && protyle.protyle && protyle.protyle.element === protyleElement) {
                 return protyle;
             }
         }

@@ -1,13 +1,14 @@
 {
   "name": "plugin-calc",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "private": true,
-  "description": "思源笔记插件：输入以等号结尾的算式，按回车自动算出结果",
+  "description": "思源笔记插件：等号结算与具有三种视图的计算笔记本",
   "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
     "pack": "node tools/pack.mjs",
-    "test": "node test/number.probe.mjs && node test/precision.test.mjs && node test/polynomial.test.mjs && node test/calc.test.mjs && node test/plugin.test.mjs"
+    "package": "node tools/pack.mjs && node tools/verify-zip.mjs && node tools/preflight.mjs",
+    "test": "node build.mjs && node test/number.probe.mjs && node test/precision.test.mjs && node test/polynomial.test.mjs && node test/calc.test.mjs && node test/notebook.test.mjs && node test/view.test.mjs && node test/plugin.test.mjs"
   }
 }

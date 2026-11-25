@@ -1,6 +1,7 @@
 # 依赖与构建产物
 node_modules/
 package.zip
+plugin-calc.zip
 
 # 编辑器 / 系统
 .vscode/

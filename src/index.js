@@ -16,9 +16,18 @@
 
 import {Plugin, getAllEditor, Setting, showMessage} from "siyuan";
 import {settleText} from "./lib/expr.mjs";
+import {renderCalcNotebook} from "./notebook-view.js";
 
 /** 设置存储文件名 */
 const STORAGE_NAME = "settings";
+const NOTEBOOK_MARKDOWN = `;;;plugin-calc/notebook
+单价=68
+数量=2
+运费=10
+
+商品金额：{{单价*数量}}
+含运费总价：{{单价*数量+运费}}
+;;;`;
 
 const DEFAULT_SETTINGS = {
     enabled: true,
@@ -41,6 +50,17 @@ export default class EqualsCalcPlugin extends Plugin {
 
     async onload() {
         await this.loadSettings();
+        this.customBlockRenders.notebook = {
+            render: options => renderCalcNotebook(options, this.getPrecisionOptions())
+        };
+        this.protyleSlash.push({
+            id: "calc-notebook",
+            filter: ["计算", "计算笔记本", "算式", "calc", "calc notebook", "js"],
+            html: "<span class=\"plugin-calc-slash\">∑<span>计算笔记本</span></span>",
+            callback: protyle => {
+                protyle.insert(NOTEBOOK_MARKDOWN, true, true);
+            }
+        });
 
         // 捕获阶段监听：Protyle 自身的 keydown 在冒泡阶段，
         // 放在捕获阶段才能保证「回车」先经过本插件。
@@ -210,7 +230,7 @@ export default class EqualsCalcPlugin extends Plugin {
         }
 
         const target = event.target;
-        if (!target || typeof target.closest !== "function") {
+        if (!target || typeof target.closest !== "function" || target.closest(".plugin-calc-notebook")) {
             return;
         }
         const editorElement = target.closest(".protyle-wysiwyg");
@@ -308,7 +328,8 @@ export default class EqualsCalcPlugin extends Plugin {
     commitChange(blockElement, oldHTML) {
         const id = blockElement.getAttribute("data-node-id");
         const protyle = this.findProtyle(blockElement);
-        const instance = protyle && typeof protyle.getInstance === "function" ? protyle.getInstance() : null;
+        const instance = protyle && (typeof protyle.updateTransactionElement === "function" ||
+            typeof protyle.updateTransaction === "function") ? protyle : null;
         if (!instance) {
             // 找不到编辑器实例时至少保证 DOM 是对的，下次输入会同步
             console.warn(`[${this.name}] 未找到 Protyle 实例，本次修改可能未持久化`);
@@ -341,7 +362,7 @@ export default class EqualsCalcPlugin extends Plugin {
     findProtyleByElement(protyleElement) {
         const editors = getAllEditor() || [];
         for (const protyle of editors) {
-            if (protyle && protyle.element === protyleElement) {
+            if (protyle && protyle.protyle && protyle.protyle.element === protyleElement) {
                 return protyle;
             }
         }
